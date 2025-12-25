@@ -3,11 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Samemo — Entrée Stock</title>
+<title>Entrée Stock — SAMEMO</title>
 
 <style>
 :root{
-  --primary:#2563eb;
+  --primary:#0f766e;
   --success:#16a34a;
   --error:#dc2626;
   --bg:#f8fafc;
@@ -26,9 +26,19 @@ body{
   margin:auto;
   padding:20px;
 }
-.header{text-align:center;margin-bottom:20px}
-.logo{font-size:26px;font-weight:800;color:var(--primary)}
-.subtitle{font-size:14px;color:#475569}
+.header{
+  text-align:center;
+  margin-bottom:20px;
+}
+.logo{
+  font-size:26px;
+  font-weight:800;
+  color:var(--primary);
+}
+.subtitle{
+  font-size:14px;
+  color:#475569;
+}
 .card{
   background:var(--card);
   border-radius:16px;
@@ -39,12 +49,17 @@ body{
   display:inline-block;
   padding:6px 12px;
   border-radius:999px;
-  background:#eff6ff;
+  background:#ecfeff;
   color:var(--primary);
   font-weight:600;
   margin-bottom:12px;
 }
-label{font-size:13px;font-weight:600;margin-top:12px;display:block}
+label{
+  font-size:13px;
+  font-weight:600;
+  margin-top:12px;
+  display:block;
+}
 input{
   width:100%;
   padding:14px;
@@ -67,7 +82,7 @@ button{
 #confirmBtn{background:var(--disabled);color:#fff}
 #confirmBtn.enabled{background:var(--success)}
 #confirmBtn:disabled{cursor:not-allowed}
-#message{text-align:center;font-weight:600;margin-top:10px}
+#scanMessage{text-align:center;font-weight:600;margin-top:10px}
 .products{margin-top:16px;display:flex;flex-direction:column;gap:12px}
 .product-card{
   background:#f8fafc;
@@ -81,10 +96,21 @@ button{
 .product-card img{
   width:60px;height:60px;border-radius:10px;object-fit:cover
 }
-.remove-btn{background:none;border:none;font-size:20px;cursor:pointer}
+.qty{
+  width:70px;
+  padding:8px;
+  border-radius:8px;
+  border:1px solid var(--border);
+}
+.remove-btn{
+  background:none;border:none;font-size:20px;cursor:pointer
+}
 .hidden{display:none}
-.success-icon{font-size:48px;color:var(--success);text-align:center}
-ul{padding-left:18px}
+.success-icon{
+  font-size:48px;
+  color:var(--success);
+  text-align:center;
+}
 </style>
 </head>
 
@@ -93,30 +119,29 @@ ul{padding-left:18px}
 
 <div class="header">
   <div class="logo">SAMEMO</div>
-  <div class="subtitle">Entrée de stock → Zone STOCK</div>
+  <div class="subtitle">Entrée Stock</div>
 </div>
 
 <!-- FORM -->
 <div id="screen-form" class="card">
-  <div class="badge">📥 Entrée Stock</div>
+
+  <div class="badge">📦 <span id="count">0</span> produit(s)</div>
 
   <label>Acteur</label>
   <input id="actor" readonly>
 
-  <label>Source</label>
-  <input id="from" readonly value="RECEPTION">
-
   <label>Destination</label>
-  <input id="to" readonly value="STOCK">
+  <input value="STOCK" readonly>
 
   <div id="qr-reader" style="width:100%;margin-top:12px;"></div>
-  <div id="message"></div>
+  <div id="scanMessage"></div>
 
   <button type="button" id="scanBtn">📷 Scanner un produit</button>
 
   <div id="products" class="products"></div>
 
   <button id="confirmBtn" disabled>CONFIRMER L’ENTRÉE</button>
+
 </div>
 
 <!-- SUCCESS -->
@@ -125,7 +150,6 @@ ul{padding-left:18px}
   <h3 style="text-align:center">Entrée enregistrée</h3>
 
   <p><strong>Acteur :</strong> <span id="s-actor"></span></p>
-  <p><strong>Flux :</strong> RECEPTION → STOCK</p>
 
   <strong>Produits :</strong>
   <ul id="s-products"></ul>
@@ -137,123 +161,98 @@ ul{padding-left:18px}
 
 <script src="https://unpkg.com/html5-qrcode"></script>
 <script>
-const API_URL = "https://script.google.com/macros/s/AKfycbwGL-RIRW81fNEvOrOvf_fn80vElficKi3s8oCbcRExyuZJ_74mg6YdjFZAOIwlrkqA/exec";
-
-const scannedProducts = {};
+const API_URL="TON_URL_APPS_SCRIPT_ICI";
+const scannedProducts={};
 let scanner;
 let lastCode=null,lastTime=0,COOLDOWN=1000;
 
-/* params */
-const qs = new URLSearchParams(location.search);
-actor.value = qs.get("actor") || "";
+const qs=new URLSearchParams(location.search);
+actor.value=qs.get("actor")||"";
 
 function showMessage(t,type="error"){
-  message.textContent=t;
-  message.style.color=type==="success"?"#16a34a":"#dc2626";
-  setTimeout(()=>message.textContent="",2000);
+  scanMessage.textContent=t;
+  scanMessage.style.color=type==="success"?"#16a34a":"#dc2626";
+  setTimeout(()=>scanMessage.textContent="",1500);
 }
 
 function checkValid(){
-  const ok = actor.value && Object.keys(scannedProducts).length > 0;
-  confirmBtn.disabled = !ok;
-  confirmBtn.classList.toggle("enabled", ok);
+  const hasProducts=Object.keys(scannedProducts).length>0;
+  const qtyOk=Object.values(scannedProducts).every(p=>p.qty>0);
+  confirmBtn.disabled=!(hasProducts&&qtyOk);
+  confirmBtn.classList.toggle("enabled",!confirmBtn.disabled);
 }
 
-scanBtn.onclick = () => {
+scanBtn.onclick=()=>{
   scanBtn.style.display="none";
-  scanner = new Html5Qrcode("qr-reader");
+  scanner=new Html5Qrcode("qr-reader");
   scanner.start({facingMode:"environment"},{fps:10,qrbox:250},onScan);
 };
 
 async function onScan(code){
-  const now = Date.now();
+  const now=Date.now();
   if(code===lastCode && now-lastTime<COOLDOWN) return;
   lastCode=code; lastTime=now;
 
-  if(code.startsWith("http")||code.includes("://")){
-    showMessage("❌ QR invalide"); return;
-  }
-
-  const res = await fetch(`${API_URL}?action=product&code=${encodeURIComponent(code)}`);
-  const p = await res.json();
-  if(!p){ showMessage("❌ Produit inconnu"); return; }
+  const res=await fetch(`${API_URL}?action=product&code=${encodeURIComponent(code)}`);
+  const p=await res.json();
+  if(!p){showMessage("Produit inconnu");return;}
 
   if(!scannedProducts[code]){
     scannedProducts[code]={name:p.name,photo:p.photo,qty:1};
     render();
-    showMessage("✅ Produit ajouté","success");
+    showMessage("Produit ajouté","success");
   }
 }
 
 function render(){
   products.innerHTML="";
   for(const c in scannedProducts){
-    const p = scannedProducts[c];
-    const d = document.createElement("div");
+    const p=scannedProducts[c];
+    const d=document.createElement("div");
     d.className="product-card";
     d.innerHTML=`
       <img src="${p.photo}">
-      <div>
+      <div style="flex:1">
         <strong>${p.name}</strong><br>
         <small>${c}</small><br>
-        Qté <input type="number" min="1" value="${p.qty}"
-          onchange="scannedProducts['${c}'].qty=this.value">
+        Qté <input class="qty" type="number" min="1" value="${p.qty}"
+          onchange="scannedProducts['${c}'].qty=Number(this.value);checkValid()">
       </div>
       <button class="remove-btn"
         onclick="delete scannedProducts['${c}'];render()">❌</button>
     `;
     products.appendChild(d);
   }
+  count.textContent=Object.keys(scannedProducts).length;
   checkValid();
 }
 
-confirmBtn.onclick = async () => {
-  confirmBtn.disabled = true;
-
-  try{
-    const res = await fetch(API_URL,{
-      method:"POST",
-      headers:{ "Content-Type":"application/json" },
-      body:JSON.stringify({
-        actor: actor.value,
-        from: "RECEPTION",
-        to: "STOCK",
-        products: scannedProducts
-      })
-    });
-
-    const r = await res.json();
-
-    if(!r.success){
-      showMessage("❌ " + (r.error || "Erreur entrée stock"));
-      confirmBtn.disabled=false;
-      return;
-    }
-
-    showSuccess();
-  }catch{
-    showMessage("❌ Erreur serveur");
-    confirmBtn.disabled=false;
-  }
+confirmBtn.onclick=async()=>{
+  await fetch(API_URL,{
+    method:"POST",
+    body:JSON.stringify({
+      actor:actor.value,
+      from:"FOURNISSEUR",
+      to:"STOCK",
+      products:scannedProducts
+    })
+  });
+  showSuccess();
 };
 
 function showSuccess(){
   document.getElementById("screen-form").classList.add("hidden");
   document.getElementById("screen-success").classList.remove("hidden");
-
-  document.getElementById("s-actor").textContent = actor.value;
-
-  const list = document.getElementById("s-products");
-  list.innerHTML = "";
-
+  document.getElementById("s-actor").textContent=actor.value;
+  const ul=document.getElementById("s-products");
+  ul.innerHTML="";
   for(const c in scannedProducts){
-    const p = scannedProducts[c];
-    const li = document.createElement("li");
-    li.textContent = `${p.name} (${c}) x${p.qty}`;
-    list.appendChild(li);
+    const p=scannedProducts[c];
+    const li=document.createElement("li");
+    li.textContent=`${p.name} (${c}) x${p.qty}`;
+    ul.appendChild(li);
   }
 }
-
 </script>
 </body>
 </html>
