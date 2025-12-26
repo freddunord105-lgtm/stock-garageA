@@ -3,113 +3,55 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Entrée Stock — SAMEMO</title>
+<title>SAMEMO — Entrée Stock (Bac fixe)</title>
+<meta name="theme-color" content="#0f766e">
 
 <style>
 :root{
   --primary:#0f766e;
   --success:#16a34a;
+  --warning:#f59e0b;
   --error:#dc2626;
   --bg:#f8fafc;
-  --card:#fff;
+  --card:#ffffff;
   --border:#e5e7eb;
-  --disabled:#94a3b8;
+  --muted:#64748b;
 }
 *{box-sizing:border-box}
-body{
-  margin:0;
-  font-family:system-ui,sans-serif;
-  background:var(--bg);
-}
-.app{
-  max-width:420px;
-  margin:auto;
-  padding:20px;
-}
-.header{
-  text-align:center;
-  margin-bottom:20px;
-}
-.logo{
-  font-size:26px;
-  font-weight:800;
-  color:var(--primary);
-}
-.subtitle{
-  font-size:14px;
-  color:#475569;
-}
-.card{
-  background:var(--card);
-  border-radius:16px;
-  padding:20px;
-  box-shadow:0 10px 30px rgba(0,0,0,.06);
-}
-.badge{
-  display:inline-block;
-  padding:6px 12px;
-  border-radius:999px;
-  background:#ecfeff;
-  color:var(--primary);
-  font-weight:600;
-  margin-bottom:12px;
-}
-label{
-  font-size:13px;
-  font-weight:600;
-  margin-top:12px;
-  display:block;
-}
+body{margin:0;font-family:system-ui,-apple-system,BlinkMacSystemFont,sans-serif;background:var(--bg)}
+.app{max-width:520px;margin:auto;padding:16px}
+.header{text-align:center;margin-bottom:12px}
+.logo{font-size:26px;font-weight:900;color:var(--primary);letter-spacing:.5px}
+.subtitle{font-size:14px;color:var(--muted)}
+.card{background:var(--card);border-radius:14px;padding:16px;margin-bottom:12px;box-shadow:0 10px 24px rgba(0,0,0,.06)}
+.row{display:flex;gap:10px;align-items:center;justify-content:space-between}
+.small{font-size:13px;color:var(--muted)}
+.big{font-size:20px;font-weight:900}
+.hr{height:1px;background:var(--border);margin:12px 0}
+.badge{display:inline-block;padding:4px 10px;border-radius:999px;font-size:12px;font-weight:900}
+.badge.info{background:#e0f2fe;color:#075985}
+.badge.ok{background:#dcfce7;color:#15803d}
+.badge.warn{background:#fef3c7;color:#92400e}
+.badge.err{background:#fee2e2;color:#b91c1c}
+button{width:100%;padding:12px 14px;border:none;border-radius:12px;font-weight:900;cursor:pointer;margin-top:10px}
+.primary{background:var(--primary);color:#fff}
+.success{background:var(--success);color:#fff}
+.ghost{background:#fff;border:1px solid var(--border);color:#0f172a}
+.hidden{display:none}
+.center{text-align:center}
+.kpi{display:flex;gap:10px;justify-content:space-between;margin-top:10px}
+.kpi>div{flex:1;background:#f8fafc;border:1px solid var(--border);border-radius:12px;padding:10px}
+.kpi .label{font-size:12px;color:var(--muted);font-weight:900}
+.kpi .value{font-size:18px;font-weight:900;color:#0f172a}
+#qr-reader-bac,#qr-reader-prod{width:100%;min-height:260px}
+.note{padding:10px;border-radius:12px;background:#f8fafc;border:1px dashed var(--border);color:#0f172a;font-weight:700}
 input{
   width:100%;
-  padding:14px;
-  margin-top:6px;
+  padding:12px;
   border-radius:12px;
   border:1px solid var(--border);
-}
-input[readonly]{background:#f1f5f9}
-button{
-  width:100%;
-  margin-top:18px;
-  padding:16px;
-  border:none;
-  border-radius:14px;
-  font-size:16px;
-  font-weight:700;
-  cursor:pointer;
-}
-#scanBtn{background:var(--primary);color:#fff}
-#confirmBtn{background:var(--disabled);color:#fff}
-#confirmBtn.enabled{background:var(--success)}
-#confirmBtn:disabled{cursor:not-allowed}
-#scanMessage{text-align:center;font-weight:600;margin-top:10px}
-.products{margin-top:16px;display:flex;flex-direction:column;gap:12px}
-.product-card{
-  background:#f8fafc;
-  border:1px solid var(--border);
-  border-radius:14px;
-  padding:14px;
-  display:flex;
-  gap:12px;
-  align-items:center;
-}
-.product-card img{
-  width:60px;height:60px;border-radius:10px;object-fit:cover
-}
-.qty{
-  width:70px;
-  padding:8px;
-  border-radius:8px;
-  border:1px solid var(--border);
-}
-.remove-btn{
-  background:none;border:none;font-size:20px;cursor:pointer
-}
-.hidden{display:none}
-.success-icon{
-  font-size:48px;
-  color:var(--success);
-  text-align:center;
+  background:#f1f5f9;
+  font-weight:800;
 }
 </style>
 </head>
@@ -117,142 +59,405 @@ button{
 <body>
 <div class="app">
 
-<div class="header">
-  <div class="logo">SAMEMO</div>
-  <div class="subtitle">Entrée Stock</div>
-</div>
+  <div class="header">
+    <div class="logo">SAMEMO</div>
+    <div class="subtitle">Entrée Stock — Scan Bac ➜ Scan Produit</div>
+  </div>
 
-<!-- FORM -->
-<div id="screen-form" class="card">
+  <div id="toast" class="card hidden center"></div>
 
-  <div class="badge">📦 <span id="count">0</span> produit(s)</div>
+  <!-- SCREEN: SCAN BAC -->
+  <div id="screen-bac" class="card">
+    <div class="row">
+      <div class="big">1) Scanner le bac STOCK</div>
+      <button class="ghost" style="width:auto;margin:0;padding:10px 12px" onclick="resetAll()">↻</button>
+    </div>
 
-  <label>Acteur</label>
-  <input id="actor" readonly>
+    <div class="hr"></div>
 
-  <label>Destination</label>
-  <input value="STOCK" readonly>
+    <label class="small">Acteur (optionnel)</label>
+    <input id="actor" readonly>
 
-  <div id="qr-reader" style="width:100%;margin-top:12px;"></div>
-  <div id="scanMessage"></div>
+    <div class="hr"></div>
 
-  <button type="button" id="scanBtn">📷 Scanner un produit</button>
+    <button id="btnStartBac" class="primary" type="button">📷 Démarrer scan bac</button>
+    <div id="qr-reader-bac" class="hidden" style="margin-top:10px"></div>
+    <div id="bacMsg" class="center" style="margin-top:10px;font-weight:900"></div>
 
-  <div id="products" class="products"></div>
+    <div class="hr"></div>
+    <div class="note small">
+      Le QR du bac doit contenir son <b>BAC_ID</b> (ex: <b>ST-001</b>).
+    </div>
+  </div>
 
-  <button id="confirmBtn" disabled>CONFIRMER L’ENTRÉE</button>
+  <!-- SCREEN: SCAN PRODUCT -->
+  <div id="screen-prod" class="card hidden">
+    <div class="row">
+      <div class="big">2) Scanner le produit</div>
+      <button class="ghost" style="width:auto;margin:0;padding:10px 12px" id="btnBack">⬅</button>
+    </div>
 
-</div>
+    <div class="hr"></div>
 
-<!-- SUCCESS -->
-<div id="screen-success" class="card hidden">
-  <div class="success-icon">✅</div>
-  <h3 style="text-align:center">Entrée enregistrée</h3>
+    <div id="info" class="note"></div>
 
-  <p><strong>Acteur :</strong> <span id="s-actor"></span></p>
+    <div class="kpi">
+      <div>
+        <div class="label">Ajouté</div>
+        <div class="value" id="kpiAdded">0</div>
+      </div>
+      <div>
+        <div class="label">Capacité</div>
+        <div class="value" id="kpiMax">—</div>
+      </div>
+      <div>
+        <div class="label">Actuel</div>
+        <div class="value" id="kpiCurrent">—</div>
+      </div>
+    </div>
 
-  <strong>Produits :</strong>
-  <ul id="s-products"></ul>
+    <button id="btnStartProd" class="primary" type="button" style="margin-top:12px">📷 Démarrer scan produit</button>
+    <div id="qr-reader-prod" class="hidden" style="margin-top:10px"></div>
+    <div id="prodMsg" class="center" style="margin-top:10px;font-weight:900"></div>
 
-  <button onclick="location.reload()">🔁 Nouvelle entrée</button>
-</div>
+    <button id="btnConfirm" class="success hidden" type="button">✅ Confirmer entrée stock</button>
+  </div>
 
 </div>
 
 <script src="https://unpkg.com/html5-qrcode"></script>
 <script>
-const API_URL="TON_URL_APPS_SCRIPT_ICI";
-const scannedProducts={};
-let scanner;
-let lastCode=null,lastTime=0,COOLDOWN=1000;
+/* ================= CONFIG ================= */
+/**
+ * GET : ton Apps Script (ou ton proxy si tu veux)
+ *  - ?action=bacStock&bac=ST-001  -> {success:true, data:{BAC_ID, PRODUIT_CODE, PRODUIT_NOM, QTY_ACTUEL, QTY_MAX}}
+ *
+ * POST : via Cloudflare Function (pour éviter CORS)
+ *  - /api/updateStockBac  (Function) -> forward vers Apps Script doPost(action=updateStockBac)
+ */
+const API_GET = "TON_URL_APPS_SCRIPT_ICI";  // ex: https://script.google.com/macros/s/.../exec
+const API_POST = "/api/updateStockBac";    // ton endpoint proxy Cloudflare
 
-const qs=new URLSearchParams(location.search);
-actor.value=qs.get("actor")||"";
+/* ================= STATE ================= */
+let bacId = "";
+let bacData = null;
 
-function showMessage(t,type="error"){
-  scanMessage.textContent=t;
-  scanMessage.style.color=type==="success"?"#16a34a":"#dc2626";
-  setTimeout(()=>scanMessage.textContent="",1500);
+let bacScanner = null;
+let bacRunning = false;
+
+let prodScanner = null;
+let prodRunning = false;
+
+let addedCount = 0;
+
+// anti jitter global
+let lastScan = { code:null, time:0 };
+const COOLDOWN_MS = 250;
+
+// ✅ OPTI anti double scan (disparition obligatoire)
+let productLocked = false;
+let noDetectStreak = 0;
+const UNLOCK_AFTER_FAILS = 8; // ~0.8s à fps=10
+
+/* ================= HELPERS ================= */
+const $ = (id) => document.getElementById(id);
+
+function toast(msg, type="success"){
+  const t = $("toast");
+  t.textContent = msg;
+  t.className = "card center";
+  t.style.border = "1px solid var(--border)";
+  t.style.background =
+    type==="success" ? "#ecfdf5" :
+    type==="error" ? "#fee2e2" :
+    type==="warn" ? "#fef3c7" : "#e0f2fe";
+  t.classList.remove("hidden");
+  setTimeout(()=>t.classList.add("hidden"), 2000);
 }
 
-function checkValid(){
-  const hasProducts=Object.keys(scannedProducts).length>0;
-  const qtyOk=Object.values(scannedProducts).every(p=>p.qty>0);
-  confirmBtn.disabled=!(hasProducts&&qtyOk);
-  confirmBtn.classList.toggle("enabled",!confirmBtn.disabled);
+function showScreen(which){
+  $("screen-bac").classList.add("hidden");
+  $("screen-prod").classList.add("hidden");
+  $(which).classList.remove("hidden");
 }
 
-scanBtn.onclick=()=>{
-  scanBtn.style.display="none";
-  scanner=new Html5Qrcode("qr-reader");
-  scanner.start({facingMode:"environment"},{fps:10,qrbox:250},onScan);
+function getActor(){
+  const qs = new URLSearchParams(location.search);
+  return qs.get("actor") || "";
+}
+
+/* ================= INIT ================= */
+$("actor").value = getActor();
+
+/* ================= RESET ================= */
+function resetAll(){
+  stopBacSafe();
+  stopProdSafe();
+  bacId = "";
+  bacData = null;
+  addedCount = 0;
+  $("bacMsg").textContent = "";
+  $("prodMsg").textContent = "";
+  $("qr-reader-bac").classList.add("hidden");
+  $("btnStartBac").classList.remove("hidden");
+  showScreen("screen-bac");
+}
+
+/* ================= BAC SCAN ================= */
+$("btnStartBac").onclick = async () => {
+  try{ await navigator.mediaDevices.getUserMedia({ video:true }); }
+  catch(e){
+    toast("📷 Caméra refusée", "error");
+    return;
+  }
+
+  $("btnStartBac").classList.add("hidden");
+  $("qr-reader-bac").classList.remove("hidden");
+  $("bacMsg").textContent = "📌 Scanne le QR du bac (ST-xxx)";
+  $("bacMsg").style.color = "#0f172a";
+
+  bacScanner = new Html5Qrcode("qr-reader-bac");
+  bacRunning = false;
+
+  bacScanner.start(
+    { facingMode:"environment" },
+    { fps:10, qrbox:250 },
+    (codeText) => onBacScanned(codeText),
+    () => {}
+  ).then(()=> bacRunning = true)
+   .catch(err => {
+     console.log(err);
+     bacRunning = false;
+     toast("📷 Caméra indisponible", "error");
+     resetAll();
+   });
 };
 
-async function onScan(code){
-  const now=Date.now();
-  if(code===lastCode && now-lastTime<COOLDOWN) return;
-  lastCode=code; lastTime=now;
+async function onBacScanned(codeText){
+  const now = Date.now();
+  if(codeText === lastScan.code && (now - lastScan.time) < COOLDOWN_MS) return;
+  lastScan = { code:codeText, time:now };
 
-  const res=await fetch(`${API_URL}?action=product&code=${encodeURIComponent(code)}`);
-  const p=await res.json();
-  if(!p){showMessage("Produit inconnu");return;}
+  bacId = String(codeText).trim();
+  if(!bacId){
+    $("bacMsg").textContent = "❌ QR vide";
+    $("bacMsg").style.color = "#dc2626";
+    return;
+  }
 
-  if(!scannedProducts[code]){
-    scannedProducts[code]={name:p.name,photo:p.photo,qty:1};
-    render();
-    showMessage("Produit ajouté","success");
+  $("bacMsg").textContent = "✅ Bac scanné : " + bacId;
+  $("bacMsg").style.color = "#16a34a";
+
+  stopBacSafe();
+
+  // charge info bac (produit attendu)
+  try{
+    const res = await fetch(`${API_GET}?action=bacStock&bac=${encodeURIComponent(bacId)}`, { cache:"no-store" });
+    const json = await res.json();
+
+    if(!json || json.success === false){
+      toast("❌ " + (json?.error || "Bac inconnu"), "error");
+      resetAll();
+      return;
+    }
+
+    bacData = json.data || json; // tolérant
+    openProductScreen();
+
+  }catch(err){
+    console.log(err);
+    toast("Erreur API bacStock", "error");
+    resetAll();
   }
 }
 
-function render(){
-  products.innerHTML="";
-  for(const c in scannedProducts){
-    const p=scannedProducts[c];
-    const d=document.createElement("div");
-    d.className="product-card";
-    d.innerHTML=`
-      <img src="${p.photo}">
-      <div style="flex:1">
-        <strong>${p.name}</strong><br>
-        <small>${c}</small><br>
-        Qté <input class="qty" type="number" min="1" value="${p.qty}"
-          onchange="scannedProducts['${c}'].qty=Number(this.value);checkValid()">
-      </div>
-      <button class="remove-btn"
-        onclick="delete scannedProducts['${c}'];render()">❌</button>
-    `;
-    products.appendChild(d);
+function stopBacSafe(){
+  if(bacScanner && bacRunning){
+    bacScanner.stop().catch(()=>{}).finally(()=>{ bacRunning = false; });
+  }else{
+    bacRunning = false;
   }
-  count.textContent=Object.keys(scannedProducts).length;
-  checkValid();
 }
 
-confirmBtn.onclick=async()=>{
-  await fetch(API_URL,{
-    method:"POST",
-    body:JSON.stringify({
-      actor:actor.value,
-      from:"FOURNISSEUR",
-      to:"STOCK",
-      products:scannedProducts
-    })
-  });
-  showSuccess();
+/* ================= PRODUCT SCREEN ================= */
+function openProductScreen(){
+  stopProdSafe();
+
+  addedCount = 0;
+  productLocked = false;
+  noDetectStreak = 0;
+
+  const prodCode = String(bacData.PRODUIT_CODE || "").trim();
+  const prodName = String(bacData.PRODUIT_NOM || "Produit").trim();
+  const qtyMax = (bacData.QTY_MAX != null) ? Number(bacData.QTY_MAX) : null;
+  const qtyActuel = (bacData.QTY_ACTUEL != null) ? Number(bacData.QTY_ACTUEL) : null;
+
+  $("info").innerHTML = `
+    <div style="font-weight:900">Bac : <span class="badge info">${bacId}</span></div>
+    <div class="small" style="margin-top:6px">
+      Produit attendu : <b>${prodName}</b> (<b>${prodCode || "?"}</b>)
+    </div>
+    <div class="small" style="margin-top:6px">
+      Scanne le produit pour ajouter des unités. Chaque scan valide = <b>+1</b>.
+    </div>
+  `;
+
+  $("kpiAdded").textContent = "0";
+  $("kpiMax").textContent = (Number.isFinite(qtyMax) ? String(qtyMax) : "—");
+  $("kpiCurrent").textContent = (Number.isFinite(qtyActuel) ? String(qtyActuel) : "—");
+
+  $("prodMsg").textContent = "";
+  $("btnConfirm").classList.add("hidden");
+  $("qr-reader-prod").classList.add("hidden");
+  $("btnStartProd").classList.remove("hidden");
+
+  showScreen("screen-prod");
+}
+
+/* back */
+$("btnBack").onclick = () => {
+  stopProdSafe();
+  resetAll();
 };
 
-function showSuccess(){
-  document.getElementById("screen-form").classList.add("hidden");
-  document.getElementById("screen-success").classList.remove("hidden");
-  document.getElementById("s-actor").textContent=actor.value;
-  const ul=document.getElementById("s-products");
-  ul.innerHTML="";
-  for(const c in scannedProducts){
-    const p=scannedProducts[c];
-    const li=document.createElement("li");
-    li.textContent=`${p.name} (${c}) x${p.qty}`;
-    ul.appendChild(li);
+/* start product scan */
+$("btnStartProd").onclick = async () => {
+  const expectedProd = String(bacData?.PRODUIT_CODE || "").trim();
+  if(!expectedProd){
+    toast("Bac sans PRODUIT_CODE", "error");
+    return;
+  }
+
+  try{ await navigator.mediaDevices.getUserMedia({ video:true }); }
+  catch(e){
+    toast("📷 Caméra refusée", "error");
+    resetAll();
+    return;
+  }
+
+  $("btnStartProd").classList.add("hidden");
+  $("qr-reader-prod").classList.remove("hidden");
+  $("prodMsg").textContent = "📌 Scanne le produit attendu";
+  $("prodMsg").style.color = "#0f172a";
+
+  prodScanner = new Html5Qrcode("qr-reader-prod");
+  prodRunning = false;
+
+  prodScanner.start(
+    { facingMode:"environment" },
+    { fps:10, qrbox:250 },
+    (codeText) => onProductScanned(codeText),
+    () => {
+      // failure: rien détecté -> déverrouille après disparition
+      if(productLocked){
+        noDetectStreak++;
+        if(noDetectStreak >= UNLOCK_AFTER_FAILS){
+          productLocked = false;
+          noDetectStreak = 0;
+          $("prodMsg").textContent = "📌 OK, tu peux rescanner";
+          $("prodMsg").style.color = "#0f172a";
+        }
+      }
+    }
+  ).then(()=> prodRunning = true)
+   .catch(err => {
+     console.log(err);
+     prodRunning = false;
+     toast("📷 Caméra indisponible", "error");
+     resetAll();
+   });
+};
+
+function onProductScanned(codeText){
+  const now = Date.now();
+  if(codeText === lastScan.code && (now - lastScan.time) < COOLDOWN_MS) return;
+  lastScan = { code:codeText, time:now };
+
+  if(productLocked){
+    $("prodMsg").textContent = "⛔ Éloigne le produit puis rescanne";
+    $("prodMsg").style.color = "#f59e0b";
+    return;
+  }
+  noDetectStreak = 0;
+
+  const scanned = String(codeText).trim();
+  const expected = String(bacData.PRODUIT_CODE || "").trim();
+
+  if(scanned !== expected){
+    $("prodMsg").textContent = "❌ Mauvais produit : " + scanned;
+    $("prodMsg").style.color = "#dc2626";
+    return;
+  }
+
+  // ✅ scan validé
+  addedCount++;
+  productLocked = true;   // verrouille jusqu'à disparition
+  noDetectStreak = 0;
+
+  $("kpiAdded").textContent = String(addedCount);
+  $("prodMsg").textContent = `✅ OK (+1) — total ajouté: ${addedCount}. Éloigne pour rescanner.`;
+  $("prodMsg").style.color = "#16a34a";
+
+  if(navigator.vibrate) navigator.vibrate(50);
+
+  $("btnConfirm").classList.remove("hidden");
+}
+
+function stopProdSafe(){
+  productLocked = false;
+  noDetectStreak = 0;
+
+  if(prodScanner && prodRunning){
+    prodScanner.stop().catch(()=>{}).finally(()=>{ prodRunning = false; });
+  }else{
+    prodRunning = false;
   }
 }
+
+/* ================= CONFIRM ================= */
+$("btnConfirm").onclick = async () => {
+  if(!bacId || !bacData) return;
+  if(addedCount <= 0){
+    toast("Rien à ajouter", "warn");
+    return;
+  }
+
+  try{
+    const body = new URLSearchParams();
+    body.set("action", "updateStockBac");
+    body.set("bac", bacId);
+    body.set("qtyAdded", String(addedCount));
+    body.set("actor", getActor());
+
+    const res = await fetch(API_POST, { method:"POST", body });
+
+    const txt = await res.text();
+    let r = {};
+    try { r = JSON.parse(txt); }
+    catch(e){
+      toast("❌ Réponse non JSON", "error");
+      console.log("RAW:", txt);
+      return;
+    }
+
+    if(r && r.success === false){
+      toast("❌ " + (r.error || "Erreur serveur"), "error");
+      return;
+    }
+
+    toast("✅ Entrée stock enregistrée", "success");
+    // retour bac + reload état
+    resetAll();
+
+  }catch(err){
+    console.log(err);
+    toast("Erreur réseau", "error");
+  }
+};
+
+/* ================= START ================= */
+resetAll();
 </script>
+
 </body>
 </html>
