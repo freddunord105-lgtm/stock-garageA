@@ -21,7 +21,7 @@
 body{margin:0;font-family:system-ui,-apple-system,BlinkMacSystemFont,sans-serif;background:var(--bg)}
 .app{max-width:520px;margin:auto;padding:16px}
 .header{text-align:center;margin-bottom:12px}
-.logo{font-size:26px;font-weight:900;color:var(--primary);letter-spacing:.5px}
+.logo{font-size:26px;font-weight:900;color:var(--primary)}
 .subtitle{font-size:14px;color:var(--muted)}
 .card{background:var(--card);border-radius:14px;padding:16px;margin-bottom:12px;box-shadow:0 10px 24px rgba(0,0,0,.06)}
 .row{display:flex;gap:10px;align-items:center;justify-content:space-between}
@@ -30,434 +30,189 @@ body{margin:0;font-family:system-ui,-apple-system,BlinkMacSystemFont,sans-serif;
 .hr{height:1px;background:var(--border);margin:12px 0}
 .badge{display:inline-block;padding:4px 10px;border-radius:999px;font-size:12px;font-weight:900}
 .badge.info{background:#e0f2fe;color:#075985}
-.badge.ok{background:#dcfce7;color:#15803d}
-.badge.warn{background:#fef3c7;color:#92400e}
-.badge.err{background:#fee2e2;color:#b91c1c}
 button{width:100%;padding:12px 14px;border:none;border-radius:12px;font-weight:900;cursor:pointer;margin-top:10px}
 .primary{background:var(--primary);color:#fff}
 .success{background:var(--success);color:#fff}
-.ghost{background:#fff;border:1px solid var(--border);color:#0f172a}
+.ghost{background:#fff;border:1px solid var(--border)}
 .hidden{display:none}
 .center{text-align:center}
 .kpi{display:flex;gap:10px;justify-content:space-between;margin-top:10px}
 .kpi>div{flex:1;background:#f8fafc;border:1px solid var(--border);border-radius:12px;padding:10px}
 .kpi .label{font-size:12px;color:var(--muted);font-weight:900}
-.kpi .value{font-size:18px;font-weight:900;color:#0f172a}
+.kpi .value{font-size:18px;font-weight:900}
 #qr-reader-bac,#qr-reader-prod{width:100%;min-height:260px}
-.note{padding:10px;border-radius:12px;background:#f8fafc;border:1px dashed var(--border);color:#0f172a;font-weight:700}
-input{
-  width:100%;
-  padding:12px;
-  border-radius:12px;
-  border:1px solid var(--border);
-  background:#f1f5f9;
-  font-weight:800;
-}
+.note{padding:10px;border-radius:12px;background:#f8fafc;border:1px dashed var(--border);font-weight:700}
+input{width:100%;padding:12px;border-radius:12px;border:1px solid var(--border);background:#f1f5f9;font-weight:800}
 </style>
 </head>
 
 <body>
 <div class="app">
 
-  <div class="header">
-    <div class="logo">SAMEMO</div>
-    <div class="subtitle">Entrée Stock — Scan Bac ➜ Scan Produit</div>
+<div class="header">
+  <div class="logo">SAMEMO</div>
+  <div class="subtitle">Entrée Stock — Scan Bac ➜ Scan Produit</div>
+</div>
+
+<div id="toast" class="card hidden center"></div>
+
+<!-- SCAN BAC -->
+<div id="screen-bac" class="card">
+  <div class="row">
+    <div class="big">1) Scanner le bac STOCK</div>
+    <button class="ghost" style="width:auto" onclick="resetAll()">↻</button>
   </div>
 
-  <div id="toast" class="card hidden center"></div>
+  <div class="hr"></div>
 
-  <!-- SCREEN: SCAN BAC -->
-  <div id="screen-bac" class="card">
-    <div class="row">
-      <div class="big">1) Scanner le bac STOCK</div>
-      <button class="ghost" style="width:auto;margin:0;padding:10px 12px" onclick="resetAll()">↻</button>
-    </div>
+  <label class="small">Acteur</label>
+  <input id="actor" readonly>
 
-    <div class="hr"></div>
+  <button id="btnStartBac" class="primary">📷 Démarrer scan bac</button>
+  <div id="qr-reader-bac" class="hidden"></div>
+  <div id="bacMsg" class="center" style="font-weight:900"></div>
+</div>
 
-    <label class="small">Acteur (optionnel)</label>
-    <input id="actor" readonly>
-
-    <div class="hr"></div>
-
-    <button id="btnStartBac" class="primary" type="button">📷 Démarrer scan bac</button>
-    <div id="qr-reader-bac" class="hidden" style="margin-top:10px"></div>
-    <div id="bacMsg" class="center" style="margin-top:10px;font-weight:900"></div>
-
-    <div class="hr"></div>
-    <div class="note small">
-      Le QR du bac doit contenir son <b>BAC_ID</b> (ex: <b>ST-001</b>).
-    </div>
+<!-- SCAN PRODUIT -->
+<div id="screen-prod" class="card hidden">
+  <div class="row">
+    <div class="big">2) Scanner le produit</div>
+    <button class="ghost" style="width:auto" id="btnBack">⬅</button>
   </div>
 
-  <!-- SCREEN: SCAN PRODUCT -->
-  <div id="screen-prod" class="card hidden">
-    <div class="row">
-      <div class="big">2) Scanner le produit</div>
-      <button class="ghost" style="width:auto;margin:0;padding:10px 12px" id="btnBack">⬅</button>
-    </div>
+  <div class="hr"></div>
 
-    <div class="hr"></div>
+  <div id="info" class="note"></div>
 
-    <div id="info" class="note"></div>
-
-    <div class="kpi">
-      <div>
-        <div class="label">Ajouté</div>
-        <div class="value" id="kpiAdded">0</div>
-      </div>
-      <div>
-        <div class="label">Capacité</div>
-        <div class="value" id="kpiMax">—</div>
-      </div>
-      <div>
-        <div class="label">Actuel</div>
-        <div class="value" id="kpiCurrent">—</div>
-      </div>
-    </div>
-
-    <button id="btnStartProd" class="primary" type="button" style="margin-top:12px">📷 Démarrer scan produit</button>
-    <div id="qr-reader-prod" class="hidden" style="margin-top:10px"></div>
-    <div id="prodMsg" class="center" style="margin-top:10px;font-weight:900"></div>
-
-    <button id="btnConfirm" class="success hidden" type="button">✅ Confirmer entrée stock</button>
+  <div class="kpi">
+    <div><div class="label">Ajouté</div><div class="value" id="kpiAdded">0</div></div>
+    <div><div class="label">Capacité</div><div class="value" id="kpiMax">—</div></div>
+    <div><div class="label">Actuel</div><div class="value" id="kpiCurrent">—</div></div>
   </div>
+
+  <button id="btnStartProd" class="primary">📷 Démarrer scan produit</button>
+  <div id="qr-reader-prod" class="hidden"></div>
+  <div id="prodMsg" class="center" style="font-weight:900"></div>
+
+  <button id="btnConfirm" class="success hidden">✅ Confirmer entrée stock</button>
+</div>
 
 </div>
 
 <script src="https://unpkg.com/html5-qrcode"></script>
 <script>
-/* ================= CONFIG ================= */
-/**
- * GET : ton Apps Script (ou ton proxy si tu veux)
- *  - ?action=bacStock&bac=ST-001  -> {success:true, data:{BAC_ID, PRODUIT_CODE, PRODUIT_NOM, QTY_ACTUEL, QTY_MAX}}
- *
- * POST : via Cloudflare Function (pour éviter CORS)
- *  - /api/updateStockBac  (Function) -> forward vers Apps Script doPost(action=updateStockBac)
- */
-const API_GET = "TON_URL_APPS_SCRIPT_ICI";  // ex: https://script.google.com/macros/s/.../exec
-const API_POST = "/api/updateStockBac";    // ton endpoint proxy Cloudflare
+const API_GET = "https://script.google.com/macros/s/AKfycbyX6BtJdAgxRWPZg3hzeR3vgKCV7fBQ9FmSqNjqLpMDZweDRVYvk2pfYDakkvwYSZ7n/exec";
+const API_POST = "/api/updateStockBac";
 
-/* ================= STATE ================= */
-let bacId = "";
-let bacData = null;
+let bacId="", bacData=null;
+let bacScanner=null, prodScanner=null;
+let bacRunning=false, prodRunning=false;
+let addedCount=0;
+let lastScan={code:null,time:0};
+const COOLDOWN_MS=250;
 
-let bacScanner = null;
-let bacRunning = false;
+let productLocked=false, noDetectStreak=0;
+const UNLOCK_AFTER_FAILS=8;
 
-let prodScanner = null;
-let prodRunning = false;
+const $=id=>document.getElementById(id);
 
-let addedCount = 0;
+$("actor").value=new URLSearchParams(location.search).get("actor")||"";
 
-// anti jitter global
-let lastScan = { code:null, time:0 };
-const COOLDOWN_MS = 250;
-
-// ✅ OPTI anti double scan (disparition obligatoire)
-let productLocked = false;
-let noDetectStreak = 0;
-const UNLOCK_AFTER_FAILS = 8; // ~0.8s à fps=10
-
-/* ================= HELPERS ================= */
-const $ = (id) => document.getElementById(id);
-
-function toast(msg, type="success"){
-  const t = $("toast");
-  t.textContent = msg;
-  t.className = "card center";
-  t.style.border = "1px solid var(--border)";
-  t.style.background =
-    type==="success" ? "#ecfdf5" :
-    type==="error" ? "#fee2e2" :
-    type==="warn" ? "#fef3c7" : "#e0f2fe";
-  t.classList.remove("hidden");
-  setTimeout(()=>t.classList.add("hidden"), 2000);
+function toast(m,t="success"){
+  const e=$("toast");
+  e.textContent=m;
+  e.style.background=t==="success"?"#ecfdf5":"#fee2e2";
+  e.classList.remove("hidden");
+  setTimeout(()=>e.classList.add("hidden"),2000);
 }
 
-function showScreen(which){
-  $("screen-bac").classList.add("hidden");
-  $("screen-prod").classList.add("hidden");
-  $(which).classList.remove("hidden");
-}
-
-function getActor(){
-  const qs = new URLSearchParams(location.search);
-  return qs.get("actor") || "";
-}
-
-/* ================= INIT ================= */
-$("actor").value = getActor();
-
-/* ================= RESET ================= */
 function resetAll(){
-  stopBacSafe();
-  stopProdSafe();
-  bacId = "";
-  bacData = null;
-  addedCount = 0;
-  $("bacMsg").textContent = "";
-  $("prodMsg").textContent = "";
-  $("qr-reader-bac").classList.add("hidden");
+  stopBacSafe(); stopProdSafe();
+  bacId=""; bacData=null; addedCount=0;
+  $("screen-bac").classList.remove("hidden");
+  $("screen-prod").classList.add("hidden");
   $("btnStartBac").classList.remove("hidden");
-  showScreen("screen-bac");
 }
 
-/* ================= BAC SCAN ================= */
-$("btnStartBac").onclick = async () => {
-  try{ await navigator.mediaDevices.getUserMedia({ video:true }); }
-  catch(e){
-    toast("📷 Caméra refusée", "error");
-    return;
-  }
-
+$("btnStartBac").onclick=async()=>{
+  try{await navigator.mediaDevices.getUserMedia({video:true})}catch{return toast("Caméra refusée","error")}
   $("btnStartBac").classList.add("hidden");
   $("qr-reader-bac").classList.remove("hidden");
-  $("bacMsg").textContent = "📌 Scanne le QR du bac (ST-xxx)";
-  $("bacMsg").style.color = "#0f172a";
-
-  bacScanner = new Html5Qrcode("qr-reader-bac");
-  bacRunning = false;
-
-  bacScanner.start(
-    { facingMode:"environment" },
-    { fps:10, qrbox:250 },
-    (codeText) => onBacScanned(codeText),
-    () => {}
-  ).then(()=> bacRunning = true)
-   .catch(err => {
-     console.log(err);
-     bacRunning = false;
-     toast("📷 Caméra indisponible", "error");
-     resetAll();
-   });
+  bacScanner=new Html5Qrcode("qr-reader-bac");
+  bacScanner.start({facingMode:"environment"},{fps:10,qrbox:250},onBacScanned);
+  bacRunning=true;
 };
 
-async function onBacScanned(codeText){
-  const now = Date.now();
-  if(codeText === lastScan.code && (now - lastScan.time) < COOLDOWN_MS) return;
-  lastScan = { code:codeText, time:now };
-
-  bacId = String(codeText).trim();
-  if(!bacId){
-    $("bacMsg").textContent = "❌ QR vide";
-    $("bacMsg").style.color = "#dc2626";
-    return;
-  }
-
-  $("bacMsg").textContent = "✅ Bac scanné : " + bacId;
-  $("bacMsg").style.color = "#16a34a";
-
+async function onBacScanned(code){
+  const n=Date.now();
+  if(code===lastScan.code&&n-lastScan.time<COOLDOWN_MS)return;
+  lastScan={code,time:n};
+  bacId=code.trim();
   stopBacSafe();
 
-  // charge info bac (produit attendu)
-  try{
-    const res = await fetch(`${API_GET}?action=bacStock&bac=${encodeURIComponent(bacId)}`, { cache:"no-store" });
-    const json = await res.json();
+  const r=await fetch(`${API_GET}?action=bacStock&bac=${encodeURIComponent(bacId)}`);
+  const j=await r.json();
+  if(!j.success)return toast(j.error,"error");
 
-    if(!json || json.success === false){
-      toast("❌ " + (json?.error || "Bac inconnu"), "error");
-      resetAll();
-      return;
-    }
-
-    bacData = json.data || json; // tolérant
-    openProductScreen();
-
-  }catch(err){
-    console.log(err);
-    toast("Erreur API bacStock", "error");
-    resetAll();
-  }
+  bacData=j.data;
+  openProd();
 }
 
 function stopBacSafe(){
-  if(bacScanner && bacRunning){
-    bacScanner.stop().catch(()=>{}).finally(()=>{ bacRunning = false; });
-  }else{
-    bacRunning = false;
-  }
+  if(bacScanner&&bacRunning)bacScanner.stop();
+  bacRunning=false;
 }
 
-/* ================= PRODUCT SCREEN ================= */
-function openProductScreen(){
-  stopProdSafe();
-
-  addedCount = 0;
-  productLocked = false;
-  noDetectStreak = 0;
-
-  const prodCode = String(bacData.PRODUIT_CODE || "").trim();
-  const prodName = String(bacData.PRODUIT_NOM || "Produit").trim();
-  const qtyMax = (bacData.QTY_MAX != null) ? Number(bacData.QTY_MAX) : null;
-  const qtyActuel = (bacData.QTY_ACTUEL != null) ? Number(bacData.QTY_ACTUEL) : null;
-
-  $("info").innerHTML = `
-    <div style="font-weight:900">Bac : <span class="badge info">${bacId}</span></div>
-    <div class="small" style="margin-top:6px">
-      Produit attendu : <b>${prodName}</b> (<b>${prodCode || "?"}</b>)
-    </div>
-    <div class="small" style="margin-top:6px">
-      Scanne le produit pour ajouter des unités. Chaque scan valide = <b>+1</b>.
-    </div>
-  `;
-
-  $("kpiAdded").textContent = "0";
-  $("kpiMax").textContent = (Number.isFinite(qtyMax) ? String(qtyMax) : "—");
-  $("kpiCurrent").textContent = (Number.isFinite(qtyActuel) ? String(qtyActuel) : "—");
-
-  $("prodMsg").textContent = "";
-  $("btnConfirm").classList.add("hidden");
-  $("qr-reader-prod").classList.add("hidden");
-  $("btnStartProd").classList.remove("hidden");
-
-  showScreen("screen-prod");
+function openProd(){
+  $("screen-bac").classList.add("hidden");
+  $("screen-prod").classList.remove("hidden");
+  $("info").innerHTML=`<b>Bac ${bacId}</b><br>Produit attendu : ${bacData.PRODUIT_NOM} (${bacData.PRODUIT_CODE})`;
+  $("kpiAdded").textContent=0;
+  $("kpiMax").textContent=bacData.QTY_MAX;
+  $("kpiCurrent").textContent=bacData.QTY_ACTUEL;
 }
 
-/* back */
-$("btnBack").onclick = () => {
-  stopProdSafe();
-  resetAll();
-};
-
-/* start product scan */
-$("btnStartProd").onclick = async () => {
-  const expectedProd = String(bacData?.PRODUIT_CODE || "").trim();
-  if(!expectedProd){
-    toast("Bac sans PRODUIT_CODE", "error");
-    return;
-  }
-
-  try{ await navigator.mediaDevices.getUserMedia({ video:true }); }
-  catch(e){
-    toast("📷 Caméra refusée", "error");
-    resetAll();
-    return;
-  }
-
+$("btnStartProd").onclick=async()=>{
+  try{await navigator.mediaDevices.getUserMedia({video:true})}catch{return toast("Caméra refusée","error")}
   $("btnStartProd").classList.add("hidden");
   $("qr-reader-prod").classList.remove("hidden");
-  $("prodMsg").textContent = "📌 Scanne le produit attendu";
-  $("prodMsg").style.color = "#0f172a";
-
-  prodScanner = new Html5Qrcode("qr-reader-prod");
-  prodRunning = false;
-
-  prodScanner.start(
-    { facingMode:"environment" },
-    { fps:10, qrbox:250 },
-    (codeText) => onProductScanned(codeText),
-    () => {
-      // failure: rien détecté -> déverrouille après disparition
-      if(productLocked){
-        noDetectStreak++;
-        if(noDetectStreak >= UNLOCK_AFTER_FAILS){
-          productLocked = false;
-          noDetectStreak = 0;
-          $("prodMsg").textContent = "📌 OK, tu peux rescanner";
-          $("prodMsg").style.color = "#0f172a";
-        }
-      }
-    }
-  ).then(()=> prodRunning = true)
-   .catch(err => {
-     console.log(err);
-     prodRunning = false;
-     toast("📷 Caméra indisponible", "error");
-     resetAll();
-   });
+  prodScanner=new Html5Qrcode("qr-reader-prod");
+  prodScanner.start({facingMode:"environment"},{fps:10,qrbox:250},onProdScanned,()=>{if(productLocked&&++noDetectStreak>=UNLOCK_AFTER_FAILS){productLocked=false;noDetectStreak=0}});
+  prodRunning=true;
 };
 
-function onProductScanned(codeText){
-  const now = Date.now();
-  if(codeText === lastScan.code && (now - lastScan.time) < COOLDOWN_MS) return;
-  lastScan = { code:codeText, time:now };
-
-  if(productLocked){
-    $("prodMsg").textContent = "⛔ Éloigne le produit puis rescanne";
-    $("prodMsg").style.color = "#f59e0b";
-    return;
-  }
-  noDetectStreak = 0;
-
-  const scanned = String(codeText).trim();
-  const expected = String(bacData.PRODUIT_CODE || "").trim();
-
-  if(scanned !== expected){
-    $("prodMsg").textContent = "❌ Mauvais produit : " + scanned;
-    $("prodMsg").style.color = "#dc2626";
-    return;
-  }
-
-  // ✅ scan validé
+function onProdScanned(code){
+  if(productLocked)return;
+  if(code.trim()!==bacData.PRODUIT_CODE)return;
   addedCount++;
-  productLocked = true;   // verrouille jusqu'à disparition
-  noDetectStreak = 0;
-
-  $("kpiAdded").textContent = String(addedCount);
-  $("prodMsg").textContent = `✅ OK (+1) — total ajouté: ${addedCount}. Éloigne pour rescanner.`;
-  $("prodMsg").style.color = "#16a34a";
-
-  if(navigator.vibrate) navigator.vibrate(50);
-
+  productLocked=true;
+  $("kpiAdded").textContent=addedCount;
   $("btnConfirm").classList.remove("hidden");
 }
 
 function stopProdSafe(){
-  productLocked = false;
-  noDetectStreak = 0;
-
-  if(prodScanner && prodRunning){
-    prodScanner.stop().catch(()=>{}).finally(()=>{ prodRunning = false; });
-  }else{
-    prodRunning = false;
-  }
+  productLocked=false; noDetectStreak=0;
+  if(prodScanner&&prodRunning)prodScanner.stop();
+  prodRunning=false;
 }
 
-/* ================= CONFIRM ================= */
-$("btnConfirm").onclick = async () => {
-  if(!bacId || !bacData) return;
-  if(addedCount <= 0){
-    toast("Rien à ajouter", "warn");
-    return;
-  }
+$("btnConfirm").onclick=async()=>{
+  const b=new URLSearchParams();
+  b.set("action","updateStockBac");
+  b.set("bac",bacId);
+  b.set("qtyAdded",addedCount);
+  b.set("actor",$("actor").value);
 
-  try{
-    const body = new URLSearchParams();
-    body.set("action", "updateStockBac");
-    body.set("bac", bacId);
-    body.set("qtyAdded", String(addedCount));
-    body.set("actor", getActor());
+  const r=await fetch(API_POST,{method:"POST",body:b});
+  const j=await r.json();
+  if(!j.success)return toast(j.error,"error");
 
-    const res = await fetch(API_POST, { method:"POST", body });
-
-    const txt = await res.text();
-    let r = {};
-    try { r = JSON.parse(txt); }
-    catch(e){
-      toast("❌ Réponse non JSON", "error");
-      console.log("RAW:", txt);
-      return;
-    }
-
-    if(r && r.success === false){
-      toast("❌ " + (r.error || "Erreur serveur"), "error");
-      return;
-    }
-
-    toast("✅ Entrée stock enregistrée", "success");
-    // retour bac + reload état
-    resetAll();
-
-  }catch(err){
-    console.log(err);
-    toast("Erreur réseau", "error");
-  }
+  toast("Entrée stock enregistrée");
+  resetAll();
 };
 
-/* ================= START ================= */
+$("btnBack").onclick=resetAll;
 resetAll();
 </script>
-
 </body>
 </html>
