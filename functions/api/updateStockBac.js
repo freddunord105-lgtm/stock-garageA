@@ -1,6 +1,6 @@
 export async function onRequestPost({ request }) {
   // ⚠️ Mets TON URL Apps Script /exec ici (celle déployée)
-  const GAS_URL = "https://script.google.com/macros/s/AKfycbxsHiBMzEZwLZN_cg-farnblXkaC69AoJxL1v7tmi9RH4-H15KOl9iOCe8U9q3Tbnpt/exec";
+  const GAS_URL = "https://script.google.com/macros/s/AKfycbztkSDDO0KbzJT24yvVXd61nljCNJsSj4UwH9HPgbOz0fSM_SI7xuXffP7FSpMskaNH/exec";
 
   try {
     const form = await request.formData();
