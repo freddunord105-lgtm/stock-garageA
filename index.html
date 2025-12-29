@@ -28,6 +28,8 @@ body{margin:0;font-family:system-ui,-apple-system,BlinkMacSystemFont,sans-serif;
 .small{font-size:13px;color:var(--muted)}
 .big{font-size:20px;font-weight:900}
 .hr{height:1px;background:var(--border);margin:12px 0}
+.badge{display:inline-block;padding:4px 10px;border-radius:999px;font-size:12px;font-weight:900}
+.badge.info{background:#e0f2fe;color:#075985}
 button{width:100%;padding:12px 14px;border:none;border-radius:12px;font-weight:900;cursor:pointer;margin-top:10px}
 .primary{background:var(--primary);color:#fff}
 .success{background:var(--success);color:#fff}
@@ -47,110 +49,97 @@ input{width:100%;padding:12px;border-radius:12px;border:1px solid var(--border);
 <body>
 <div class="app">
 
-  <div class="header">
-    <div class="logo">SAMEMO</div>
-    <div class="subtitle">Entrée Stock — Scan Bac ➜ Scan Produit</div>
+<div class="header">
+  <div class="logo">SAMEMO</div>
+  <div class="subtitle">Entrée Stock — Scan Bac ➜ Scan Produit</div>
+</div>
+
+<div id="toast" class="card hidden center"></div>
+
+<!-- SCAN BAC -->
+<div id="screen-bac" class="card">
+  <div class="row">
+    <div class="big">1) Scanner le bac STOCK</div>
+    <button class="ghost" style="width:auto" onclick="resetAll()">↻</button>
   </div>
 
-  <div id="toast" class="card hidden center"></div>
+  <div class="hr"></div>
 
-  <!-- SCAN BAC -->
-  <div id="screen-bac" class="card">
-    <div class="row">
-      <div class="big">1) Scanner le bac STOCK</div>
-      <button class="ghost" style="width:auto" onclick="resetAll()">↻</button>
-    </div>
+  <label class="small">Acteur</label>
+  <input id="actor" readonly>
 
-    <div class="hr"></div>
+  <button id="btnStartBac" class="primary">📷 Démarrer scan bac</button>
+  <div id="qr-reader-bac" class="hidden"></div>
+  <div id="bacMsg" class="center" style="font-weight:900"></div>
+</div>
 
-    <label class="small">Acteur</label>
-    <input id="actor" readonly>
-
-    <button id="btnStartBac" class="primary">📷 Démarrer scan bac</button>
-    <div id="qr-reader-bac" class="hidden"></div>
-    <div id="bacMsg" class="center" style="font-weight:900"></div>
+<!-- SCAN PRODUIT -->
+<div id="screen-prod" class="card hidden">
+  <div class="row">
+    <div class="big">2) Scanner le produit</div>
+    <button class="ghost" style="width:auto" id="btnBack">⬅</button>
   </div>
 
-  <!-- SCAN PRODUIT -->
-  <div id="screen-prod" class="card hidden">
-    <div class="row">
-      <div class="big">2) Scanner le produit</div>
-      <button class="ghost" style="width:auto" id="btnBack">⬅</button>
-    </div>
+  <div class="hr"></div>
 
-    <div class="hr"></div>
+  <div id="info" class="note"></div>
 
-    <div id="info" class="note"></div>
-
-    <div class="kpi">
-      <div><div class="label">Ajouté</div><div class="value" id="kpiAdded">0</div></div>
-      <div><div class="label">Capacité</div><div class="value" id="kpiMax">—</div></div>
-      <div><div class="label">Actuel</div><div class="value" id="kpiCurrent">—</div></div>
-    </div>
-
-    <button id="btnStartProd" class="primary">📷 Démarrer scan produit</button>
-    <div id="qr-reader-prod" class="hidden"></div>
-    <div id="prodMsg" class="center" style="font-weight:900"></div>
-
-    <button id="btnConfirm" class="success hidden">✅ Confirmer entrée stock</button>
+  <div class="kpi">
+    <div><div class="label">Ajouté</div><div class="value" id="kpiAdded">0</div></div>
+    <div><div class="label">Capacité</div><div class="value" id="kpiMax">—</div></div>
+    <div><div class="label">Actuel</div><div class="value" id="kpiCurrent">—</div></div>
   </div>
+
+  <button id="btnStartProd" class="primary">📷 Démarrer scan produit</button>
+  <div id="qr-reader-prod" class="hidden"></div>
+  <div id="prodMsg" class="center" style="font-weight:900"></div>
+
+  <button id="btnConfirm" class="success hidden">✅ Confirmer entrée stock</button>
+</div>
 
 </div>
 
 <script src="https://unpkg.com/html5-qrcode"></script>
 <script>
-/** ========= CONFIG ========= **/
 const API_GET  = "https://script.google.com/macros/s/AKfycbztkSDDO0KbzJT24yvVXd61nljCNJsSj4UwH9HPgbOz0fSM_SI7xuXffP7FSpMskaNH/exec";
-// IMPORTANT: POST doit aller sur le même /exec (pas /api/...)
-const API_POST = API_GET;
+const API_POST = "/api/updateStockBac"; // <-- tu gardes ton autre backend, on ne touche pas
 
-// si tu n'as qu'un seul lieu, tu peux mettre un défaut
+let bacId="", bacData=null;
+let bacScanner=null, prodScanner=null;
+let bacRunning=false, prodRunning=false;
+let addedCount=0;
+let lastScan={code:null,time:0};
+const COOLDOWN_MS=250;
+
+let productLocked=false, noDetectStreak=0;
+const UNLOCK_AFTER_FAILS=8;
+
+let site = "";
 const DEFAULT_SITE = "GARAGE_MONTBELIARD";
 
-/** ========= STATE ========= **/
-let bacId = "", bacData = null, site = "";
-let bacScanner = null, prodScanner = null;
-let bacRunning = false, prodRunning = false;
-let addedCount = 0;
-let lastScan = { code:null, time:0 };
-const COOLDOWN_MS = 250;
+const $=id=>document.getElementById(id);
 
-let productLocked = false, noDetectStreak = 0;
-const UNLOCK_AFTER_FAILS = 8;
+$("actor").value=new URLSearchParams(location.search).get("actor")||"";
 
-const $ = id => document.getElementById(id);
-
-/** ========= HELPERS ========= **/
-function toast(m, t="success"){
-  const e = $("toast");
-  e.textContent = m;
-  e.style.background = (t==="success") ? "#ecfdf5" : "#fee2e2";
-  e.classList.remove("hidden");
-  setTimeout(()=>e.classList.add("hidden"), 2200);
-}
-
-// Accepte:
-// - URL: https://.../?bac=ST-001&site=GARAGE...
-// - "BAC=ST-001;SITE=GARAGE..."
-// - juste "ST-001"
+/** ✅ PARSER MINIMAL ET FIABLE (URL / BAC=...;SITE=... / ST-001) **/
 function parseBacQr(raw){
   const s = String(raw || "").trim();
   if (!s) return { bac:"", site:"" };
 
-  // URL complète
+  // 1) QR = URL complète
   if (s.startsWith("http://") || s.startsWith("https://")) {
-    try {
+    try{
       const u = new URL(s);
       return {
-        bac:  (u.searchParams.get("bac") || u.searchParams.get("BAC") || "").trim(),
-        site: (u.searchParams.get("site")|| u.searchParams.get("SITE")|| "").trim(),
+        bac:  (u.searchParams.get("bac")  || "").trim(),
+        site: (u.searchParams.get("site") || "").trim()
       };
-    } catch {
+    }catch(_){
       return { bac:"", site:"" };
     }
   }
 
-  // format K=V (BAC=...;SITE=...)
+  // 2) QR = "BAC=ST-001;SITE=GARAGE_MONTBELIARD"
   if (s.includes("=")) {
     const parts = s.split(/[;|,]/).map(x=>x.trim()).filter(Boolean);
     const obj = {};
@@ -164,37 +153,16 @@ function parseBacQr(raw){
     return { bac: (obj.BAC || obj.BAC_ID || "").trim(), site: (obj.SITE || "").trim() };
   }
 
-  // fallback: juste l'id bac
-  return { bac: s, site: "" };
+  // 3) QR = juste "ST-001"
+  return { bac:s, site:"" };
 }
 
-/** ========= INIT ========= **/
-$("actor").value = new URLSearchParams(location.search).get("actor") || "";
-
-// Si tu arrives par URL de la page (pas via scan), on peut pré-remplir (optionnel)
-(function preloadFromUrl(){
-  const qs = new URLSearchParams(location.search);
-  const preBac  = (qs.get("bac")  || "").trim();
-  const preSite = (qs.get("site") || "").trim();
-  if (preBac) {
-    bacId = preBac;
-    site  = preSite || DEFAULT_SITE;
-  }
-})();
-
-function stopBacSafe(){
-  if (bacScanner && bacRunning) {
-    try { bacScanner.stop(); } catch(_) {}
-  }
-  bacRunning = false;
-}
-
-function stopProdSafe(){
-  productLocked = false; noDetectStreak = 0;
-  if (prodScanner && prodRunning) {
-    try { prodScanner.stop(); } catch(_) {}
-  }
-  prodRunning = false;
+function toast(m,t="success"){
+  const e=$("toast");
+  e.textContent=m;
+  e.style.background=t==="success"?"#ecfdf5":"#fee2e2";
+  e.classList.remove("hidden");
+  setTimeout(()=>e.classList.add("hidden"),2000);
 }
 
 function resetAll(){
@@ -203,127 +171,109 @@ function resetAll(){
   $("screen-bac").classList.remove("hidden");
   $("screen-prod").classList.add("hidden");
   $("btnStartBac").classList.remove("hidden");
-  $("qr-reader-bac").classList.add("hidden");
   $("btnStartProd").classList.remove("hidden");
-  $("qr-reader-prod").classList.add("hidden");
   $("btnConfirm").classList.add("hidden");
-  $("bacMsg").textContent = "";
-  $("prodMsg").textContent = "";
 }
 
-/** ========= SCAN BAC ========= **/
-$("btnStartBac").onclick = async () => {
-  try { await navigator.mediaDevices.getUserMedia({ video:true }); }
-  catch { return toast("Caméra refusée", "error"); }
-
+$("btnStartBac").onclick=async()=>{
+  try{await navigator.mediaDevices.getUserMedia({video:true})}catch{return toast("Caméra refusée","error")}
   $("btnStartBac").classList.add("hidden");
   $("qr-reader-bac").classList.remove("hidden");
-
-  bacScanner = new Html5Qrcode("qr-reader-bac");
-  bacScanner.start(
-    { facingMode:"environment" },
-    { fps:10, qrbox:250 },
-    onBacScanned
-  );
-  bacRunning = true;
+  bacScanner=new Html5Qrcode("qr-reader-bac");
+  bacScanner.start({facingMode:"environment"},{fps:10,qrbox:250},onBacScanned);
+  bacRunning=true;
 };
 
 async function onBacScanned(code){
-  const n = Date.now();
-  if (code === lastScan.code && (n - lastScan.time) < COOLDOWN_MS) return;
-  lastScan = { code, time:n };
+  const n=Date.now();
+  if(code===lastScan.code&&n-lastScan.time<COOLDOWN_MS)return;
+  lastScan={code,time:n};
 
   const parsed = parseBacQr(code);
   bacId = (parsed.bac || "").trim();
   site  = (parsed.site || "").trim();
 
-  // si QR ne donne pas le site, on met le défaut (vu que tu n'as qu'un seul lieu)
-  if (!site) site = DEFAULT_SITE;
+  // ✅ 1 seul lieu => si pas de site dans le QR, on met le défaut
+  if(!site) site = DEFAULT_SITE;
 
-  if (!bacId) return toast("QR bac invalide", "error");
+  if(!bacId) return toast("QR bac invalide", "error");
 
   stopBacSafe();
 
-  const r = await fetch(`${API_GET}?action=bacStock&bac=${encodeURIComponent(bacId)}&site=${encodeURIComponent(site)}`);
-  const j = await r.json();
-  if (!j.success) return toast(j.error || "Erreur bacStock", "error");
+  // (site envoyé aussi, même si le backend GET ne l'utilise pas encore, ça ne gêne pas)
+  const r=await fetch(`${API_GET}?action=bacStock&bac=${encodeURIComponent(bacId)}&site=${encodeURIComponent(site)}`);
+  const j=await r.json();
+  if(!j.success)return toast(j.error,"error");
 
-  bacData = j.data;
+  bacData=j.data;
   openProd();
 }
 
-/** ========= UI PROD ========= **/
+function stopBacSafe(){
+  if(bacScanner&&bacRunning) { try{ bacScanner.stop(); }catch(_){} }
+  bacRunning=false;
+}
+
 function openProd(){
   $("screen-bac").classList.add("hidden");
   $("screen-prod").classList.remove("hidden");
-
-  $("info").innerHTML = `<b>${site} — Bac ${bacId}</b><br>Produit attendu : ${bacData.PRODUIT_NOM} (${bacData.PRODUIT_CODE})`;
-  $("kpiAdded").textContent = "0";
-  $("kpiMax").textContent = String(bacData.QTY_MAX ?? "—");
-  $("kpiCurrent").textContent = String(bacData.QTY_ACTUEL ?? "—");
+  $("info").innerHTML=`<b>${site} — Bac ${bacId}</b><br>Produit attendu : ${bacData.PRODUIT_NOM} (${bacData.PRODUIT_CODE})`;
+  $("kpiAdded").textContent=0;
+  $("kpiMax").textContent=bacData.QTY_MAX;
+  $("kpiCurrent").textContent=bacData.QTY_ACTUEL;
 }
 
-/** ========= SCAN PRODUIT ========= **/
-$("btnStartProd").onclick = async () => {
-  try { await navigator.mediaDevices.getUserMedia({ video:true }); }
-  catch { return toast("Caméra refusée", "error"); }
-
+$("btnStartProd").onclick=async()=>{
+  try{await navigator.mediaDevices.getUserMedia({video:true})}catch{return toast("Caméra refusée","error")}
   $("btnStartProd").classList.add("hidden");
   $("qr-reader-prod").classList.remove("hidden");
-
-  prodScanner = new Html5Qrcode("qr-reader-prod");
+  prodScanner=new Html5Qrcode("qr-reader-prod");
   prodScanner.start(
-    { facingMode:"environment" },
-    { fps:10, qrbox:250 },
+    {facingMode:"environment"},
+    {fps:10,qrbox:250},
     onProdScanned,
-    () => {
-      if (productLocked && ++noDetectStreak >= UNLOCK_AFTER_FAILS) {
-        productLocked = false;
-        noDetectStreak = 0;
-      }
-    }
+    ()=>{ if(productLocked && ++noDetectStreak>=UNLOCK_AFTER_FAILS){ productLocked=false; noDetectStreak=0; } }
   );
-  prodRunning = true;
+  prodRunning=true;
 };
 
 function onProdScanned(code){
-  if (productLocked) return;
-  if (!bacData?.PRODUIT_CODE) return;
-
-  if (String(code || "").trim() !== String(bacData.PRODUIT_CODE).trim()) return;
-
+  if(productLocked)return;
+  if(code.trim()!==bacData.PRODUIT_CODE)return;
   addedCount++;
-  productLocked = true;
-  noDetectStreak = 0;
-
-  $("kpiAdded").textContent = String(addedCount);
+  productLocked=true;
+  $("kpiAdded").textContent=addedCount;
   $("btnConfirm").classList.remove("hidden");
 }
 
-/** ========= CONFIRM ========= **/
-$("btnConfirm").onclick = async () => {
-  const b = new URLSearchParams();
+function stopProdSafe(){
+  productLocked=false; noDetectStreak=0;
+  if(prodScanner&&prodRunning) { try{ prodScanner.stop(); }catch(_){} }
+  prodRunning=false;
+}
+
+$("btnConfirm").onclick=async()=>{
+  const b=new URLSearchParams();
   b.set("action","updateStockBac");
-  b.set("site", site || DEFAULT_SITE);
+  b.set("site", site);
   b.set("bac", bacId);
   b.set("qtyAdded", String(addedCount));
-  b.set("actor", $("actor").value || "");
+  b.set("actor",$("actor").value);
 
-  const r = await fetch(API_POST, {
+  const r=await fetch(API_POST,{
     method:"POST",
-    headers:{ "Content-Type":"application/x-www-form-urlencoded;charset=UTF-8" },
+    headers: {"Content-Type":"application/x-www-form-urlencoded;charset=UTF-8"},
     body: b.toString()
   });
 
-  const j = await r.json();
-  if (!j.success) return toast(j.error || "Erreur updateStockBac", "error");
+  const j=await r.json();
+  if(!j.success)return toast(j.error,"error");
 
   toast("Entrée stock enregistrée");
   resetAll();
 };
 
-$("btnBack").onclick = resetAll;
-
+$("btnBack").onclick=resetAll;
 resetAll();
 </script>
 </body>
