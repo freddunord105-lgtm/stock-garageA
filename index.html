@@ -117,28 +117,56 @@ const UNLOCK_AFTER_FAILS=8;
 
 function parseBacQr(raw){
   const s = String(raw || "").trim();
+  if (!s) return { bac:"", site:"" };
 
-  // Format recommandé: "BAC=ST001;SITE=GARAGE" (ou séparateur ; , |)
+  // 1) QR = URL complète (https://.../?bac=ST001&site=XXX)
+  if (s.startsWith("http://") || s.startsWith("https://")) {
+    try {
+      const u = new URL(s);
+      const bac  = (u.searchParams.get("bac") || u.searchParams.get("BAC") || "").trim();
+      const site = (u.searchParams.get("site") || u.searchParams.get("SITE") || "").trim();
+      return { bac, site };
+    } catch {
+      // fallback: parse query string manuellement
+      const q = s.split("?")[1] || "";
+      const p = new URLSearchParams(q);
+      return { bac:(p.get("bac")||"").trim(), site:(p.get("site")||"").trim() };
+    }
+  }
+
+  // 2) QR = querystring sans domaine (bac=...&site=...)
+  if (s.includes("bac=") || s.includes("BAC=")) {
+    const p = new URLSearchParams(s.replace(/^.*\?/, "")); // enlève éventuel "?"
+    return {
+      bac:  (p.get("bac") || p.get("BAC") || "").trim(),
+      site: (p.get("site")|| p.get("SITE")|| "").trim()
+    };
+  }
+
+  // 3) QR = "BAC=ST001;SITE=GARAGE_MONTBELIARD"
   if (s.includes("=")) {
     const parts = s.split(/[;|,]/).map(x=>x.trim()).filter(Boolean);
     const obj = {};
     for (const part of parts){
-      const [k, v] = part.split("=").map(x=>x.trim());
-      if (k) obj[k.toUpperCase()] = v || "";
+      const idx = part.indexOf("=");
+      if (idx === -1) continue;
+      const k = part.slice(0, idx).trim().toUpperCase();
+      const v = part.slice(idx + 1).trim();
+      obj[k] = v;
     }
     return { bac: (obj.BAC || obj.BAC_ID || "").trim(), site: (obj.SITE || "").trim() };
   }
 
-  // Format compact: "GARAGE|ST001"
+  // 4) QR = "GARAGE|ST001"
   if (s.includes("|")) {
-    const [a,b] = s.split("|").map(x=>x.trim());
-    // si tu fais "SITE|BAC"
-    return { site: a, bac: b };
+    const [site,bac] = s.split("|").map(x=>x.trim());
+    return { site, bac };
   }
 
-  // Fallback: juste BAC
+  // 5) QR = juste "ST001"
   return { bac: s, site: "" };
 }
+
 
 
 const $=id=>document.getElementById(id);
