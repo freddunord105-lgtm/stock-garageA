@@ -1,18 +1,19 @@
 export async function onRequestPost({ request }) {
-  // ⚠️ Mets TON URL Apps Script /exec ici (celle déployée)
   const GAS_URL = "https://script.google.com/macros/s/AKfycbztkSDDO0KbzJT24yvVXd61nljCNJsSj4UwH9HPgbOz0fSM_SI7xuXffP7FSpMskaNH/exec";
 
   try {
     const form = await request.formData();
     const bac = String(form.get("bac") || "").trim();
+    const site = String(form.get("site") || "").trim();     // ✅ AJOUT
     const qtyAdded = String(form.get("qtyAdded") || "0").trim();
     const actor = String(form.get("actor") || "").trim();
 
     const body = new URLSearchParams();
     body.set("action", "updateStockBac");
     body.set("bac", bac);
+    body.set("site", site);                                  // ✅ AJOUT (même si vide)
     body.set("qtyAdded", qtyAdded);
-    if (actor) body.set("actor", actor);
+    body.set("actor", actor);                                // ✅ toujours envoyer (sinon backend râle)
 
     const resp = await fetch(GAS_URL, {
       method: "POST",
