@@ -113,6 +113,33 @@ const COOLDOWN_MS=250;
 
 let productLocked=false, noDetectStreak=0;
 const UNLOCK_AFTER_FAILS=8;
+  let site = "";
+
+function parseBacQr(raw){
+  const s = String(raw || "").trim();
+
+  // Format recommandé: "BAC=ST001;SITE=GARAGE" (ou séparateur ; , |)
+  if (s.includes("=")) {
+    const parts = s.split(/[;|,]/).map(x=>x.trim()).filter(Boolean);
+    const obj = {};
+    for (const part of parts){
+      const [k, v] = part.split("=").map(x=>x.trim());
+      if (k) obj[k.toUpperCase()] = v || "";
+    }
+    return { bac: (obj.BAC || obj.BAC_ID || "").trim(), site: (obj.SITE || "").trim() };
+  }
+
+  // Format compact: "GARAGE|ST001"
+  if (s.includes("|")) {
+    const [a,b] = s.split("|").map(x=>x.trim());
+    // si tu fais "SITE|BAC"
+    return { site: a, bac: b };
+  }
+
+  // Fallback: juste BAC
+  return { bac: s, site: "" };
+}
+
 
 const $=id=>document.getElementById(id);
 
@@ -132,6 +159,7 @@ function resetAll(){
   $("screen-bac").classList.remove("hidden");
   $("screen-prod").classList.add("hidden");
   $("btnStartBac").classList.remove("hidden");
+  site="";
 }
 
 $("btnStartBac").onclick=async()=>{
@@ -147,16 +175,24 @@ async function onBacScanned(code){
   const n=Date.now();
   if(code===lastScan.code&&n-lastScan.time<COOLDOWN_MS)return;
   lastScan={code,time:n};
-  bacId=code.trim();
+
+  const parsed = parseBacQr(code);
+  bacId = (parsed.bac || "").trim();
+  site  = (parsed.site || "").trim();
+
+  if(!bacId) return toast("QR bac invalide", "error");
+  if(!site)  return toast("SITE manquant dans le QR bac", "error");
+
   stopBacSafe();
 
-  const r=await fetch(`${API_GET}?action=bacStock&bac=${encodeURIComponent(bacId)}`);
+  const r=await fetch(`${API_GET}?action=bacStock&bac=${encodeURIComponent(bacId)}&site=${encodeURIComponent(site)}`);
   const j=await r.json();
   if(!j.success)return toast(j.error,"error");
 
   bacData=j.data;
   openProd();
 }
+
 
 function stopBacSafe(){
   if(bacScanner&&bacRunning)bacScanner.stop();
@@ -166,10 +202,11 @@ function stopBacSafe(){
 function openProd(){
   $("screen-bac").classList.add("hidden");
   $("screen-prod").classList.remove("hidden");
-  $("info").innerHTML=`<b>Bac ${bacId}</b><br>Produit attendu : ${bacData.PRODUIT_NOM} (${bacData.PRODUIT_CODE})`;
+$("info").innerHTML=`<b>${site} — Bac ${bacId}</b><br>Produit attendu : ${bacData.PRODUIT_NOM} (${bacData.PRODUIT_CODE})`;
   $("kpiAdded").textContent=0;
   $("kpiMax").textContent=bacData.QTY_MAX;
   $("kpiCurrent").textContent=bacData.QTY_ACTUEL;
+  
 }
 
 $("btnStartProd").onclick=async()=>{
@@ -199,17 +236,24 @@ function stopProdSafe(){
 $("btnConfirm").onclick=async()=>{
   const b=new URLSearchParams();
   b.set("action","updateStockBac");
-  b.set("bac",bacId);
-  b.set("qtyAdded",addedCount);
-  b.set("actor",$("actor").value);
+  b.set("site", site);
+  b.set("bac", bacId);
+  b.set("qtyAdded", String(addedCount));
+  b.set("actor", $("actor").value);
 
-  const r=await fetch(API_POST,{method:"POST",body:b});
+  const r=await fetch(API_POST,{
+    method:"POST",
+    headers: {"Content-Type":"application/x-www-form-urlencoded;charset=UTF-8"},
+    body: b.toString()
+  });
+
   const j=await r.json();
   if(!j.success)return toast(j.error,"error");
 
   toast("Entrée stock enregistrée");
   resetAll();
 };
+
 
 $("btnBack").onclick=resetAll;
 resetAll();
