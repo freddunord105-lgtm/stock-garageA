@@ -217,11 +217,29 @@ function stopBacSafe(){
 function openProd(){
   $("screen-bac").classList.add("hidden");
   $("screen-prod").classList.remove("hidden");
-  $("info").innerHTML=`<b>${site} — Bac ${bacId}</b><br>Produit attendu : ${bacData.PRODUIT_NOM} (${bacData.PRODUIT_CODE})`;
-  $("kpiAdded").textContent=0;
-  $("kpiMax").textContent=bacData.QTY_MAX;
-  $("kpiCurrent").textContent=bacData.QTY_ACTUEL;
+
+  const qtyMax = Number(bacData.QTY_MAX || 0);
+  const qtyCurrent = Number(bacData.QTY_ACTUEL || 0);
+  const reste = Math.max(0, qtyMax - qtyCurrent);
+
+  const etatTxt =
+    qtyMax > 0
+      ? (reste === 0 ? "🟢 Bac plein" : "🟡 Bac à remplir")
+      : "";
+
+  $("info").innerHTML = `
+    <b>${site} — Bac ${bacId}</b><br>
+    <b>${bacData.PRODUIT_NOM}</b> (${bacData.PRODUIT_CODE})<br>
+    Stock actuel : ${qtyCurrent} / ${qtyMax}<br>
+    <b>Reste à remplir : ${reste}</b><br>
+    ${etatTxt}
+  `;
+
+  $("kpiAdded").textContent = 0;
+  $("kpiMax").textContent = qtyMax;
+  $("kpiCurrent").textContent = qtyCurrent;
 }
+
 
 $("btnStartProd").onclick=async()=>{
   try{await navigator.mediaDevices.getUserMedia({video:true})}catch{return toast("Caméra refusée","error")}
