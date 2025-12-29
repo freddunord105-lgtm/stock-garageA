@@ -239,11 +239,19 @@ $("btnStartProd").onclick=async()=>{
 
 function onProdScanned(code){
   if(productLocked)return;
-  if(code.trim()!==bacData.PRODUIT_CODE)return;
+  if (code.trim() !== bacData.PRODUIT_CODE) {
+  if (navigator.vibrate) navigator.vibrate([50, 50, 50]);
+  return;
+}
+
   addedCount++;
+  if (navigator.vibrate) {
+  navigator.vibrate(80); // vibration courte
+}
   productLocked=true;
   $("kpiAdded").textContent=addedCount;
   $("btnConfirm").classList.remove("hidden");
+  
 }
 
 function stopProdSafe(){
