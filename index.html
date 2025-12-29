@@ -79,6 +79,14 @@ input{width:100%;padding:12px;border-radius:12px;border:1px solid var(--border);
     <div class="big">2) Scanner le produit</div>
     <button class="ghost" style="width:auto" id="btnBack">⬅</button>
   </div>
+<!-- SUCCESS -->
+<div id="screen-success" class="card hidden">
+  <div class="big center">✅ Entrée stock enregistrée</div>
+  <div class="hr"></div>
+  <div id="successInfo" class="note"></div>
+  <div class="small center" id="successCountdown"></div>
+  <button id="btnNew" class="primary">➕ Nouvelle entrée (maintenant)</button>
+</div>
 
   <div class="hr"></div>
 
@@ -118,6 +126,53 @@ let site = "";
 const DEFAULT_SITE = "GARAGE_MONTBELIARD";
 
 const $=id=>document.getElementById(id);
+  let successTimer = null;
+let successTick = null;
+
+function clearSuccessTimers(){
+  if (successTimer) { clearTimeout(successTimer); successTimer = null; }
+  if (successTick) { clearInterval(successTick); successTick = null; }
+}
+
+function openSuccess(res){
+  clearSuccessTimers();
+
+  $("screen-bac").classList.add("hidden");
+  $("screen-prod").classList.add("hidden");
+  $("screen-success").classList.remove("hidden");
+
+  const qtyAfter = (res && res.qtyAfter != null) ? res.qtyAfter : "";
+  const cappedTxt = (res && res.capped) ? "<br><b>⚠️ Capacité atteinte (stock plafonné)</b>" : "";
+
+  $("successInfo").innerHTML = `
+    <b>${site} — Bac ${bacId}</b><br>
+    <b>${bacData.PRODUIT_NOM}</b> (${bacData.PRODUIT_CODE})<br>
+    Quantité ajoutée : <b>+${addedCount}</b><br>
+    Nouveau stock : <b>${qtyAfter}</b>
+    ${cappedTxt}
+  `;
+
+  // Auto-retour
+  let left = 3; // secondes affichées
+  $("successCountdown").textContent = `Retour automatique dans ${left}s…`;
+
+  successTick = setInterval(() => {
+    left--;
+    if (left <= 0) {
+      clearSuccessTimers();
+      resetAll();
+    } else {
+      $("successCountdown").textContent = `Retour automatique dans ${left}s…`;
+    }
+  }, 1000);
+
+  // Sécurité : retour même si l’interval bug
+  successTimer = setTimeout(() => {
+    clearSuccessTimers();
+    resetAll();
+  }, 2500);
+}
+
 
 $("actor").value=new URLSearchParams(location.search).get("actor")||"";
 
@@ -166,13 +221,17 @@ function toast(m,t="success"){
 }
 
 function resetAll(){
+  clearSuccessTimers();
   stopBacSafe(); stopProdSafe();
   bacId=""; bacData=null; addedCount=0; site="";
+  $("screen-success").classList.add("hidden");
   $("screen-bac").classList.remove("hidden");
   $("screen-prod").classList.add("hidden");
   $("btnStartBac").classList.remove("hidden");
   $("btnStartProd").classList.remove("hidden");
   $("btnConfirm").classList.add("hidden");
+  $("btnNew").onclick = () => { clearSuccessTimers(); resetAll(); };
+
 }
 
 $("btnStartBac").onclick=async()=>{
@@ -295,8 +354,8 @@ $("btnConfirm").onclick=async()=>{
   const j=await r.json();
   if(!j.success)return toast(j.error,"error");
 
-  toast("Entrée stock enregistrée");
-  resetAll();
+  openSuccess(j.data);
+
 };
 
 $("btnBack").onclick=resetAll;
